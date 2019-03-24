@@ -12,6 +12,7 @@ UOGameInstance::UOGameInstance(const FObjectInitializer& ObjectInitializer) : Su
 	OnFindSessionsCompleteDelegate = FOnFindSessionsCompleteDelegate::CreateUObject(this, &UOGameInstance::OnFindSessionsComplete);
 	OnJoinSessionCompleteDelegate = FOnJoinSessionCompleteDelegate::CreateUObject(this, &UOGameInstance::OnJoinSessionComplete);
 	OnDestroySessionCompleteDelegate = FOnDestroySessionCompleteDelegate::CreateUObject(this, &UOGameInstance::OnDestroySessionComplete);
+	OnReadFriendsListCompleteDelegate = FOnReadFriendsListComplete::CreateUObject(this, &UOGameInstance::OnReadFriendsListComplete);
 }
 
 bool UOGameInstance::HostSession(FName arg_SessionName, bool arg_bIsLAN, bool arg_bIsPresence, int32 arg_MaxNumPlayers)
@@ -20,7 +21,7 @@ bool UOGameInstance::HostSession(FName arg_SessionName, bool arg_bIsLAN, bool ar
 	if (LocalPlayer->IsValidLowLevelFast())
 	{
 		FUniqueNetIdWrapper UniqueNetIdWrapper = FUniqueNetIdWrapper(LocalPlayer->GetPreferredUniqueNetId());
-		return HostSession(UniqueNetIdWrapper.GetUniqueNetId(), arg_SessionName, arg_bIsLAN, arg_bIsPresence, arg_MaxNumPlayers);
+		return CreateSession(UniqueNetIdWrapper.GetUniqueNetId(), arg_SessionName, arg_bIsLAN, arg_bIsPresence, arg_MaxNumPlayers);
 	}
 
 	return false;
@@ -111,7 +112,7 @@ bool UOGameInstance::SendSessionInviteToFriend(const FString& arg_FriendUniqueNe
 	return false;
 }
 
-bool UOGameInstance::HostSession(TSharedPtr<const FUniqueNetId> arg_UserId, FName arg_SessionName, bool arg_bIsLAN, bool arg_bIsPresence, int32 arg_MaxNumPlayers)
+bool UOGameInstance::CreateSession(TSharedPtr<const FUniqueNetId> arg_UserId, FName arg_SessionName, bool arg_bIsLAN, bool arg_bIsPresence, int32 arg_MaxNumPlayers)
 {
 	// Get the Online Subsystem to work with
 	const IOnlineSubsystem* OnlineSubsystemInterface = IOnlineSubsystem::Get();
@@ -243,6 +244,53 @@ void UOGameInstance::OnDestroySessionComplete(FName arg_SessionName, bool arg_bW
 	}
 }
 
+void UOGameInstance::OnReadFriendsListComplete(int32 arg_LocalUserNum, bool arg_bWasSuccessful, const FString& arg_FriendsListName, const FString& arg_ErrorString)
+{
+	if (arg_bWasSuccessful)
+	{
+		IOnlineFriendsPtr FriendInterface = Online::GetFriendsInterface();
+
+		if (FriendInterface.IsValid())
+		{
+			FriendInterface->GetFriendsList(arg_LocalUserNum, arg_FriendsListName, FriendsList);
+			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, TEXT("Read friends"));
+
+			if (FriendsList.Num() > 0)
+			{
+				const IOnlineSubsystem* OnlineSubsystemInterface = IOnlineSubsystem::Get();
+				if (OnlineSubsystemInterface)
+				{
+					// Get the Session Interface to call the StartSession function
+					IOnlineSessionPtr OnlineSessionInterface = OnlineSubsystemInterface->GetSessionInterface();
+
+					for (size_t i = 0; i < FriendsList.Num(); i++)
+					{
+						if (FriendsList[i].Get().GetRealName().Contains("Timothy"))
+						{
+							FUniqueNetIdWrapper UniqueNetIdWrapper = FUniqueNetIdWrapper(FriendsList[i].Get().GetUserId());
+
+							const ULocalPlayer* LocalPlayer = GetFirstGamePlayer();
+
+							if (OnlineSessionInterface->SendSessionInviteToFriend(LocalPlayer->GetControllerId(), SessionName, *UniqueNetIdWrapper.GetUniqueNetId()))
+							{
+								GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Invited friend %d"), arg_bWasSuccessful));
+							}
+						}
+					}
+				}
+			}
+			else
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, TEXT("No friends"));
+			}
+		}
+	}
+	else
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Failed to read friends: %s"), *arg_ErrorString));
+	}
+}
+
 void UOGameInstance::OnCreateSessionComplete(FName arg_SessionName, bool arg_bWasSuccessful)
 {
 	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("OnCreateSessionComplete %s, %d"), *arg_SessionName.ToString(), arg_bWasSuccessful));
@@ -292,6 +340,13 @@ void UOGameInstance::OnStartSessionComplete(FName arg_SessionName, bool arg_bWas
 	if (arg_bWasSuccessful)
 	{
 		UGameplayStatics::OpenLevel(GetWorld(), "FirstPersonExampleMap", true, "listen");
+
+		IOnlineSessionPtr OnlineSessionInterface = OnlineSubsystemInterface->GetSessionInterface();
+		const ULocalPlayer* LocalPlayer = GetFirstGamePlayer();
+
+		// Friend
+		IOnlineFriendsPtr FriendInterface = Online::GetFriendsInterface();
+		FriendInterface->ReadFriendsList(LocalPlayer->GetControllerId(), EFriendsLists::ToString(EFriendsLists::Default), OnReadFriendsListCompleteDelegate);
 	}
 }
 

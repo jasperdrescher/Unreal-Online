@@ -41,7 +41,7 @@ public:
 	* @param bIsPresence: is the Session to create a presence session.
 	* @param MaxNumPlayers: number of Maximum allowed players on this session.
 	*/
-	bool HostSession(TSharedPtr<const FUniqueNetId> arg_UserId, FName arg_SessionName, bool arg_bIsLAN, bool arg_bIsPresence, int32 arg_MaxNumPlayers);
+	bool CreateSession(TSharedPtr<const FUniqueNetId> arg_UserId, FName arg_SessionName, bool arg_bIsLAN, bool arg_bIsPresence, int32 arg_MaxNumPlayers);
 
 	/**
 	* Joins a session via a search result.
@@ -101,9 +101,12 @@ private:
 	*/
 	void OnDestroySessionComplete(FName arg_SessionName, bool arg_bWasSuccessful);
 
+	void OnReadFriendsListComplete(int32 arg_LocalUserNum, bool arg_bWasSuccessful, const FString& arg_FriendsListName, const FString& arg_ErrorString);
+
 private:
 	TSharedPtr<class FOnlineSessionSettings> SessionSettings;
 	TSharedPtr<class FOnlineSessionSearch> SessionSearch;
+	TArray<TSharedRef<FOnlineFriend>> FriendsList;
 	FName SessionName;
 
 	// Delegate called when session created
@@ -120,6 +123,8 @@ private:
 
 	// Delegate for destroying a session
 	FOnDestroySessionCompleteDelegate OnDestroySessionCompleteDelegate;
+
+	FOnReadFriendsListComplete OnReadFriendsListCompleteDelegate;
 
 	// Handles to registered delegates for creation
 	FDelegateHandle OnCreateSessionCompleteDelegateHandle;
