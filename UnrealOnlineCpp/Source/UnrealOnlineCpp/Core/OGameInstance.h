@@ -46,6 +46,7 @@ public:
 	/**
 	* Joins a session via a search result.
 	*
+	* @param UserID: user that started the request.
 	* @param SessionName: name of session.
 	* @param SearchResult: session to join.
 	* @returns true if successful, false otherwise.
@@ -123,6 +124,16 @@ private:
 	 */
 	void OnSessionUserInviteAccepted(bool arg_bWasSuccesful, const int32 arg_LocalUserNum, TSharedPtr<const FUniqueNetId> arg_NetId, const FOnlineSessionSearchResult& arg_SessionSearchResult);
 
+	/**
+	* Function fired when an invite request has completed.
+	*
+	* @param arg_PersonInvited: unique net id of friend.
+	* @param arg_PersonInviting: unique net id of player.
+	* @param AppId: steam app id.
+	* @param arg_SessionToJoin: session search result.
+	*/
+	void OnSessionInviteReceivedComplete(const FUniqueNetId& arg_PersonInvited, const FUniqueNetId& arg_PersonInviting, const FString& AppId, const FOnlineSessionSearchResult& arg_SessionToJoin);
+
 private:
 	TSharedPtr<class FOnlineSessionSettings> SessionSettings;
 	TSharedPtr<class FOnlineSessionSearch> SessionSearch;
@@ -149,23 +160,7 @@ private:
 
 	FOnSessionUserInviteAcceptedDelegate OnSessionUserInviteAcceptedDelegate;
 
-	// Delegate for accepting invite request
-	FOnAcceptInviteComplete OnAcceptInviteCompleteDelegate;
-
-	// Delegate for when a remote friend cancels an invite
-	FOnInviteAborted OnInviteAbortedDelegate;
-
-	// Delegate for when a remote friend accepts an invite
-	FOnInviteAccepted OnInviteAccepted;
-
-	// Delegate for when a remote friend sends an invite
-	FOnInviteReceived OnInviteReceived;
-
-	// Delegate for when a remote friend reject an invite
-	FOnInviteRejected OnInviteRejected;
-
-	// Delegate for when a user receives a session invitation.The invite can be accepted by using JoinSession().
-	FOnSessionInviteReceived OnSessionInviteReceived;
+	FOnSessionInviteReceivedDelegate OnSessionInviteReceivedDelegate;
 
 	FDelegateHandle OnSessionUserInviteAcceptedDelegateHandle;
 

@@ -14,6 +14,7 @@ UOGameInstance::UOGameInstance(const FObjectInitializer& ObjectInitializer) : Su
 	OnDestroySessionCompleteDelegate = FOnDestroySessionCompleteDelegate::CreateUObject(this, &UOGameInstance::OnDestroySessionComplete);
 	OnReadFriendsListCompleteDelegate = FOnReadFriendsListComplete::CreateUObject(this, &UOGameInstance::OnReadFriendsListComplete);
 	OnSessionUserInviteAcceptedDelegate = FOnSessionUserInviteAcceptedDelegate::CreateUObject(this, &UOGameInstance::OnSessionUserInviteAccepted);
+	OnSessionInviteReceivedDelegate = FOnSessionInviteReceivedDelegate::CreateUObject(this, &UOGameInstance::OnSessionInviteReceivedComplete);
 }
 
 bool UOGameInstance::HostSession(FName arg_SessionName, bool arg_bIsLAN, bool arg_bIsPresence, int32 arg_MaxNumPlayers)
@@ -259,7 +260,7 @@ void UOGameInstance::OnReadFriendsListComplete(int32 arg_LocalUserNum, bool arg_
 
 					for (size_t i = 0; i < FriendsList.Num(); i++)
 					{
-						if (FriendsList[i].Get().GetRealName().Contains("Timothy"))
+						if (FriendsList[i].Get().GetRealName().Contains("Pingu"))
 						{
 							FUniqueNetIdWrapper UniqueNetIdWrapper = FUniqueNetIdWrapper(FriendsList[i].Get().GetUserId());
 
@@ -283,6 +284,11 @@ void UOGameInstance::OnReadFriendsListComplete(int32 arg_LocalUserNum, bool arg_
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Failed to read friends: %s"), *arg_ErrorString));
 	}
+}
+
+void UOGameInstance::OnSessionInviteReceivedComplete(const FUniqueNetId& arg_PersonInvited, const FUniqueNetId& arg_PersonInviting, const FString& arg_AppId, const FOnlineSessionSearchResult& arg_SessionToJoin)
+{
+	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, FString::Printf(TEXT("Recevied invite")));
 }
 
 void UOGameInstance::OnSessionUserInviteAccepted(bool arg_bWasSuccesful, const int32 arg_LocalUserNum, TSharedPtr<const FUniqueNetId> arg_NetId, const FOnlineSessionSearchResult& arg_SessionSearchResult)
