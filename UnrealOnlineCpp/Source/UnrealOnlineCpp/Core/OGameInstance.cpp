@@ -15,7 +15,6 @@ UOGameInstance::UOGameInstance(const FObjectInitializer& ObjectInitializer) : Su
 	OnReadFriendsListCompleteDelegate = FOnReadFriendsListComplete::CreateUObject(this, &UOGameInstance::OnReadFriendsListComplete);
 	OnSessionUserInviteAcceptedDelegate = FOnSessionUserInviteAcceptedDelegate::CreateUObject(this, &UOGameInstance::OnSessionUserInviteAccepted);
 	OnSessionInviteReceivedDelegate = FOnSessionInviteReceivedDelegate::CreateUObject(this, &UOGameInstance::OnSessionInviteReceivedComplete);
-	OnSessionInviteReceivedDelegate = FOnSessionInviteReceivedDelegate::CreateUObject(this, &UOGameInstance::)
 }
 
 void UOGameInstance::Init()
