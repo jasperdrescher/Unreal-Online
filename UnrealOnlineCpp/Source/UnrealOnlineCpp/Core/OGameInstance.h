@@ -126,7 +126,7 @@ private:
 	 * @param UserId the user being invited
 	 * @param InviteResult the search/settings for the session we're joining via invite
 	 */
-	void OnSessionUserInviteAccepted(bool arg_bWasSuccesful, const int32 arg_LocalUserNum, TSharedPtr<const FUniqueNetId> arg_NetId, const FOnlineSessionSearchResult& arg_SessionSearchResult);
+	void OnSessionUserInviteAccepted(const bool arg_bWasSuccesful, const int32 arg_LocalUserNum, TSharedPtr<const FUniqueNetId> arg_NetId, const FOnlineSessionSearchResult& arg_SessionSearchResult);
 
 	/**
 	* Function fired when an invite request has completed.
@@ -162,10 +162,13 @@ private:
 	// Delegate for reading friends list using query
 	FOnReadFriendsListComplete OnReadFriendsListCompleteDelegate;
 
+	// Delegate for when an invite is accepted (including rich presence)
 	FOnSessionUserInviteAcceptedDelegate OnSessionUserInviteAcceptedDelegate;
 
 	FOnSessionInviteReceivedDelegate OnSessionInviteReceivedDelegate;
+	FDelegateHandle OnSessionInviteReceivedDelegateHandle;
 
+	// Handles to registered delegates for accepting an invite
 	FDelegateHandle OnSessionUserInviteAcceptedDelegateHandle;
 
 	// Handles to registered delegates for creation

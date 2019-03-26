@@ -29,6 +29,7 @@ void UOGameInstance::Init()
 		if (OnlineSessionInterface.IsValid())
 		{
 			OnSessionUserInviteAcceptedDelegateHandle = OnlineSessionInterface->AddOnSessionUserInviteAcceptedDelegate_Handle(OnSessionUserInviteAcceptedDelegate);
+			OnSessionInviteReceivedDelegateHandle = OnlineSessionInterface->AddOnSessionInviteReceivedDelegate_Handle(OnSessionInviteReceivedDelegate);
 		}
 	}
 	else
@@ -331,9 +332,9 @@ void UOGameInstance::OnSessionInviteReceivedComplete(const FUniqueNetId& arg_Per
 	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, FString::Printf(TEXT("Recevied invite")));
 }
 
-void UOGameInstance::OnSessionUserInviteAccepted(bool arg_bWasSuccesful, const int32 arg_LocalUserNum, TSharedPtr<const FUniqueNetId> arg_NetId, const FOnlineSessionSearchResult& arg_SessionSearchResult)
+void UOGameInstance::OnSessionUserInviteAccepted(const bool arg_bWasSuccesful, const int32 arg_LocalUserNum, TSharedPtr<const FUniqueNetId> arg_NetId, const FOnlineSessionSearchResult& arg_SessionSearchResult)
 {
-	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, TEXT("OnSessionUserInviteAccepted"));
+	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("OnSessionUserInviteAccepted: %d"), arg_bWasSuccesful));
 
 	if (arg_bWasSuccesful)
 	{
