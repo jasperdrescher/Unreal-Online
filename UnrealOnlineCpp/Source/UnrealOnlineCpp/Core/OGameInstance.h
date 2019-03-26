@@ -17,6 +17,10 @@ class UNREALONLINECPP_API UOGameInstance : public UGameInstance
 public:
 	UOGameInstance(const FObjectInitializer& ObjectInitializer);
 
+	virtual void Init() override;
+
+	virtual void Shutdown() override;
+
 	UFUNCTION(BlueprintCallable, Category = "Online|Session")
 	bool HostSession(FName arg_SessionName, bool arg_bIsLAN, bool arg_bIsPresence, int32 arg_MaxNumPlayers);
 

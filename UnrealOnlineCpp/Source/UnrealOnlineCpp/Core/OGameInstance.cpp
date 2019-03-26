@@ -15,6 +15,47 @@ UOGameInstance::UOGameInstance(const FObjectInitializer& ObjectInitializer) : Su
 	OnReadFriendsListCompleteDelegate = FOnReadFriendsListComplete::CreateUObject(this, &UOGameInstance::OnReadFriendsListComplete);
 	OnSessionUserInviteAcceptedDelegate = FOnSessionUserInviteAcceptedDelegate::CreateUObject(this, &UOGameInstance::OnSessionUserInviteAccepted);
 	OnSessionInviteReceivedDelegate = FOnSessionInviteReceivedDelegate::CreateUObject(this, &UOGameInstance::OnSessionInviteReceivedComplete);
+	OnSessionInviteReceivedDelegate = FOnSessionInviteReceivedDelegate::CreateUObject(this, &UOGameInstance::)
+}
+
+void UOGameInstance::Init()
+{
+	Super::Init();
+
+	const IOnlineSubsystem* OnlineSubsystemInterface = IOnlineSubsystem::Get();
+	if (OnlineSubsystemInterface)
+	{
+		IOnlineSessionPtr OnlineSessionInterface = OnlineSubsystemInterface->GetSessionInterface();
+
+		if (OnlineSessionInterface.IsValid())
+		{
+			OnSessionUserInviteAcceptedDelegateHandle = OnlineSessionInterface->AddOnSessionUserInviteAcceptedDelegate_Handle(OnSessionUserInviteAcceptedDelegate);
+		}
+	}
+	else
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, TEXT("No OnlineSubsytem found!"));
+	}
+}
+
+void UOGameInstance::Shutdown()
+{
+	Super::Shutdown();
+
+	const IOnlineSubsystem* OnlineSubsystemInterface = IOnlineSubsystem::Get();
+	if (OnlineSubsystemInterface)
+	{
+		IOnlineSessionPtr OnlineSessionInterface = OnlineSubsystemInterface->GetSessionInterface();
+
+		if (OnlineSessionInterface.IsValid())
+		{
+			OnlineSessionInterface->ClearOnSessionUserInviteAcceptedDelegate_Handle(OnSessionUserInviteAcceptedDelegateHandle);
+		}
+	}
+	else
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, TEXT("No OnlineSubsytem found!"));
+	}
 }
 
 bool UOGameInstance::HostSession(FName arg_SessionName, bool arg_bIsLAN, bool arg_bIsPresence, int32 arg_MaxNumPlayers)
@@ -357,8 +398,6 @@ void UOGameInstance::OnStartSessionComplete(FName arg_SessionName, bool arg_bWas
 
 		IOnlineSessionPtr OnlineSessionInterface = OnlineSubsystemInterface->GetSessionInterface();
 		const ULocalPlayer* LocalPlayer = GetFirstGamePlayer();
-
-		OnSessionUserInviteAcceptedDelegateHandle = OnlineSessionInterface->AddOnSessionUserInviteAcceptedDelegate_Handle(OnSessionUserInviteAcceptedDelegate);
 
 		// Friend
 		IOnlineFriendsPtr FriendInterface = Online::GetFriendsInterface();
