@@ -13,6 +13,7 @@ UOGameInstance::UOGameInstance(const FObjectInitializer& ObjectInitializer) : Su
 	OnJoinSessionCompleteDelegate = FOnJoinSessionCompleteDelegate::CreateUObject(this, &UOGameInstance::OnJoinSessionComplete);
 	OnDestroySessionCompleteDelegate = FOnDestroySessionCompleteDelegate::CreateUObject(this, &UOGameInstance::OnDestroySessionComplete);
 	OnReadFriendsListCompleteDelegate = FOnReadFriendsListComplete::CreateUObject(this, &UOGameInstance::OnReadFriendsListComplete);
+	OnSessionUserInviteAcceptedDelegate = FOnSessionUserInviteAcceptedDelegate::CreateUObject(this, &UOGameInstance::OnSessionUserInviteAccepted);
 }
 
 bool UOGameInstance::HostSession(FName arg_SessionName, bool arg_bIsLAN, bool arg_bIsPresence, int32 arg_MaxNumPlayers)
@@ -55,22 +56,16 @@ bool UOGameInstance::JoinSession()
 		{
 			for (int32 i = 0; i < SessionSearch->SearchResults.Num(); i++)
 			{
-				// To avoid something crazy, we filter sessions from ourself
 				if (SessionSearch->SearchResults[i].Session.OwningUserId != LocalPlayer->GetPreferredUniqueNetId())
 				{
 					SearchResult = SessionSearch->SearchResults[i];
-
-					// Once we found sounce a Session that is not ours, just join it. Instead of using a for loop, you could
-					// use a widget where you click on and have a reference for the GameSession it represents which you can use
-					// here
 					FUniqueNetIdWrapper UniqueNetIdWrapper = FUniqueNetIdWrapper(LocalPlayer->GetPreferredUniqueNetId());
-					JoinSession(UniqueNetIdWrapper.GetUniqueNetId(), GameSessionName, SearchResult);
+					return JoinSession(UniqueNetIdWrapper.GetUniqueNetId(), GameSessionName, SearchResult);
+
 					break;
 				}
 			}
 		}
-
-		return false;
 	}
 
 	return false;
@@ -253,7 +248,6 @@ void UOGameInstance::OnReadFriendsListComplete(int32 arg_LocalUserNum, bool arg_
 		if (FriendInterface.IsValid())
 		{
 			FriendInterface->GetFriendsList(arg_LocalUserNum, arg_FriendsListName, FriendsList);
-			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, TEXT("Read friends"));
 
 			if (FriendsList.Num() > 0)
 			{
@@ -291,6 +285,20 @@ void UOGameInstance::OnReadFriendsListComplete(int32 arg_LocalUserNum, bool arg_
 	}
 }
 
+void UOGameInstance::OnSessionUserInviteAccepted(bool arg_bWasSuccesful, const int32 arg_LocalUserNum, TSharedPtr<const FUniqueNetId> arg_NetId, const FOnlineSessionSearchResult& arg_SessionSearchResult)
+{
+	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, TEXT("OnSessionUserInviteAccepted"));
+
+	if (arg_bWasSuccesful)
+	{
+		if (arg_SessionSearchResult.IsValid())
+		{
+			IOnlineSessionPtr SessionInt = IOnlineSubsystem::Get()->GetSessionInterface();
+			SessionInt->JoinSession(arg_LocalUserNum, GameSessionName, arg_SessionSearchResult);
+		}
+	}
+}
+
 void UOGameInstance::OnCreateSessionComplete(FName arg_SessionName, bool arg_bWasSuccessful)
 {
 	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("OnCreateSessionComplete %s, %d"), *arg_SessionName.ToString(), arg_bWasSuccessful));
@@ -301,12 +309,12 @@ void UOGameInstance::OnCreateSessionComplete(FName arg_SessionName, bool arg_bWa
 	{
 		// Get the Session Interface to call the StartSession function
 		IOnlineSessionPtr OnlineSessionInterface = OnlineSubsystemInterface->GetSessionInterface();
-		OnlineSessionInterface.Get()->GetSessionState(arg_SessionName);
 
 		if (OnlineSessionInterface.IsValid())
 		{
 			// Clear the SessionComplete delegate handle, since we finished this call
 			OnlineSessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(OnCreateSessionCompleteDelegateHandle);
+
 			if (arg_bWasSuccessful)
 			{
 				// Set the StartSession delegate handle
@@ -343,6 +351,8 @@ void UOGameInstance::OnStartSessionComplete(FName arg_SessionName, bool arg_bWas
 
 		IOnlineSessionPtr OnlineSessionInterface = OnlineSubsystemInterface->GetSessionInterface();
 		const ULocalPlayer* LocalPlayer = GetFirstGamePlayer();
+
+		OnSessionUserInviteAcceptedDelegateHandle = OnlineSessionInterface->AddOnSessionUserInviteAcceptedDelegate_Handle(OnSessionUserInviteAcceptedDelegate);
 
 		// Friend
 		IOnlineFriendsPtr FriendInterface = Online::GetFriendsInterface();

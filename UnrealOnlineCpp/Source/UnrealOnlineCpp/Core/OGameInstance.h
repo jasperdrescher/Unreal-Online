@@ -55,9 +55,9 @@ public:
 	/**
 	* Find an online session.
 	*
-	* @param UserId: user that initiated the request
-	* @param bIsLAN: are we searching LAN matches
-	* @param bIsPresence: are we searching presence sessions
+	* @param UserId: user that initiated the request.
+	* @param bIsLAN: are we searching LAN matches.
+	* @param bIsPresence: are we searching presence sessions.
 	*/
 	void FindSessions(TSharedPtr<const FUniqueNetId> arg_UserId, bool arg_bIsLAN, bool arg_bIsPresence);
 
@@ -86,22 +86,42 @@ private:
 	void OnFindSessionsComplete(bool arg_bWasSuccessful);
 
 	/**
-	* Delegate fired when a session join request has completed
+	* Delegate fired when a session join request has completed.
 	*
-	* @param SessionName: the name of the session this callback is for
-	* @param bWasSuccessful: true if the async action completed without error, false if there was an error
+	* @param SessionName: the name of the session this callback is for.
+	* @param bWasSuccessful: true if the async action completed without error, false if there was an error.
 	*/
 	void OnJoinSessionComplete(FName arg_SessionName, EOnJoinSessionCompleteResult::Type arg_Result);
 
 	/**
-	* Delegate fired when a destroying an online session has completed
+	* Delegate fired when a destroying an online session has completed.
 	*
-	* @param SessionName: the name of the session this callback is for
-	* @param bWasSuccessful: true if the async action completed without error, false if there was an error
+	* @param SessionName: the name of the session this callback is for.
+	* @param bWasSuccessful: true if the async action completed without error, false if there was an error.
 	*/
 	void OnDestroySessionComplete(FName arg_SessionName, bool arg_bWasSuccessful);
 
+	/**
+	 * Delegate used when reading friends list using query.
+	 *
+	 * @param LocalUserNum: the controller number of the associated user that made the request.
+	 * @param bWasSuccessful: true if the async action completed without error, false if there was an error.
+	 * @param FriendsListName: name of the friends list that was operated on.
+	 * @param ErrorString: string representing the error condition.
+	 */
 	void OnReadFriendsListComplete(int32 arg_LocalUserNum, bool arg_bWasSuccessful, const FString& arg_FriendsListName, const FString& arg_ErrorString);
+
+	/**
+	 * Called when a user accepts a session invitation. Allows the game code a chance
+	 * to clean up any existing state before accepting the invite. The invite must be
+	 * accepted by calling JoinSession() after clean up has completed
+	 *
+	 * @param bWasSuccessful true if the async action completed without error, false if there was an error
+	 * @param ControllerId the controller number of the accepting user
+	 * @param UserId the user being invited
+	 * @param InviteResult the search/settings for the session we're joining via invite
+	 */
+	void OnSessionUserInviteAccepted(bool arg_bWasSuccesful, const int32 arg_LocalUserNum, TSharedPtr<const FUniqueNetId> arg_NetId, const FOnlineSessionSearchResult& arg_SessionSearchResult);
 
 private:
 	TSharedPtr<class FOnlineSessionSettings> SessionSettings;
@@ -124,7 +144,30 @@ private:
 	// Delegate for destroying a session
 	FOnDestroySessionCompleteDelegate OnDestroySessionCompleteDelegate;
 
+	// Delegate for reading friends list using query
 	FOnReadFriendsListComplete OnReadFriendsListCompleteDelegate;
+
+	FOnSessionUserInviteAcceptedDelegate OnSessionUserInviteAcceptedDelegate;
+
+	// Delegate for accepting invite request
+	FOnAcceptInviteComplete OnAcceptInviteCompleteDelegate;
+
+	// Delegate for when a remote friend cancels an invite
+	FOnInviteAborted OnInviteAbortedDelegate;
+
+	// Delegate for when a remote friend accepts an invite
+	FOnInviteAccepted OnInviteAccepted;
+
+	// Delegate for when a remote friend sends an invite
+	FOnInviteReceived OnInviteReceived;
+
+	// Delegate for when a remote friend reject an invite
+	FOnInviteRejected OnInviteRejected;
+
+	// Delegate for when a user receives a session invitation.The invite can be accepted by using JoinSession().
+	FOnSessionInviteReceived OnSessionInviteReceived;
+
+	FDelegateHandle OnSessionUserInviteAcceptedDelegateHandle;
 
 	// Handles to registered delegates for creation
 	FDelegateHandle OnCreateSessionCompleteDelegateHandle;
