@@ -28,6 +28,7 @@ void UOGameInstance::Init()
 
 		if (OnlineSessionInterface.IsValid())
 		{
+			OnJoinSessionCompleteDelegateHandle = OnlineSessionInterface->AddOnJoinSessionCompleteDelegate_Handle(OnJoinSessionCompleteDelegate);
 			OnSessionUserInviteAcceptedDelegateHandle = OnlineSessionInterface->AddOnSessionUserInviteAcceptedDelegate_Handle(OnSessionUserInviteAcceptedDelegate);
 			OnSessionInviteReceivedDelegateHandle = OnlineSessionInterface->AddOnSessionInviteReceivedDelegate_Handle(OnSessionInviteReceivedDelegate);
 		}
@@ -206,9 +207,6 @@ bool UOGameInstance::JoinSession(TSharedPtr<const FUniqueNetId> arg_UserId, FNam
 
 		if (OnlineSessionInterface.IsValid() && arg_UserId.IsValid())
 		{
-			// Set the Handle again
-			OnJoinSessionCompleteDelegateHandle = OnlineSessionInterface->AddOnJoinSessionCompleteDelegate_Handle(OnJoinSessionCompleteDelegate);
-
 			// Call the "JoinSession" Function with the passed "SearchResult". The "SessionSearch->SearchResults" can be used to get such a
 			// "FOnlineSessionSearchResult" and pass it. Pretty straight forward!
 			return OnlineSessionInterface->JoinSession(*arg_UserId, arg_SessionName, arg_SearchResult);
