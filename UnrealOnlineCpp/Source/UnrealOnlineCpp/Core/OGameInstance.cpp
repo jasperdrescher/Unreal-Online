@@ -14,7 +14,6 @@ UOGameInstance::UOGameInstance(const FObjectInitializer& ObjectInitializer) : Su
 	OnDestroySessionCompleteDelegate = FOnDestroySessionCompleteDelegate::CreateUObject(this, &UOGameInstance::OnDestroySessionComplete);
 	OnReadFriendsListCompleteDelegate = FOnReadFriendsListComplete::CreateUObject(this, &UOGameInstance::OnReadFriendsListComplete);
 	OnSessionUserInviteAcceptedDelegate = FOnSessionUserInviteAcceptedDelegate::CreateUObject(this, &UOGameInstance::OnSessionUserInviteAccepted);
-	OnSessionInviteReceivedDelegate = FOnSessionInviteReceivedDelegate::CreateUObject(this, &UOGameInstance::OnSessionInviteReceivedComplete);
 }
 
 void UOGameInstance::Init()
@@ -30,7 +29,6 @@ void UOGameInstance::Init()
 		{
 			OnJoinSessionCompleteDelegateHandle = OnlineSessionInterface->AddOnJoinSessionCompleteDelegate_Handle(OnJoinSessionCompleteDelegate);
 			OnSessionUserInviteAcceptedDelegateHandle = OnlineSessionInterface->AddOnSessionUserInviteAcceptedDelegate_Handle(OnSessionUserInviteAcceptedDelegate);
-			OnSessionInviteReceivedDelegateHandle = OnlineSessionInterface->AddOnSessionInviteReceivedDelegate_Handle(OnSessionInviteReceivedDelegate);
 		}
 	}
 	else
@@ -59,13 +57,13 @@ void UOGameInstance::Shutdown()
 	}
 }
 
-bool UOGameInstance::HostSession(FName arg_SessionName, bool arg_bIsLAN, bool arg_bIsPresence, int32 arg_MaxNumPlayers)
+bool UOGameInstance::HostSession(FName arg_SessionName, FName arg_Map, bool arg_bIsLAN, bool arg_bIsPresence, int32 arg_MaxNumPlayers)
 {
 	const ULocalPlayer* LocalPlayer = GetFirstGamePlayer();
 	if (LocalPlayer->IsValidLowLevelFast())
 	{
 		FUniqueNetIdWrapper UniqueNetIdWrapper = FUniqueNetIdWrapper(LocalPlayer->GetPreferredUniqueNetId());
-		return CreateSession(UniqueNetIdWrapper.GetUniqueNetId(), arg_SessionName, arg_bIsLAN, arg_bIsPresence, arg_MaxNumPlayers);
+		return CreateSession(UniqueNetIdWrapper.GetUniqueNetId(), arg_SessionName, arg_Map, arg_bIsLAN, arg_bIsPresence, arg_MaxNumPlayers);
 	}
 
 	return false;
@@ -124,7 +122,7 @@ void UOGameInstance::DestroySession()
 		if (OnlineSessionInterface.IsValid())
 		{
 			OnlineSessionInterface->AddOnDestroySessionCompleteDelegate_Handle(OnDestroySessionCompleteDelegate);
-			OnlineSessionInterface->DestroySession(SessionName);
+			OnlineSessionInterface->DestroySession(SessionInfo.SessionName);
 		}
 	}
 }
@@ -150,7 +148,7 @@ bool UOGameInstance::SendSessionInviteToFriend(const FString& arg_FriendUniqueNe
 	return false;
 }
 
-bool UOGameInstance::CreateSession(TSharedPtr<const FUniqueNetId> arg_UserId, FName arg_SessionName, bool arg_bIsLAN, bool arg_bIsPresence, int32 arg_MaxNumPlayers)
+bool UOGameInstance::CreateSession(TSharedPtr<const FUniqueNetId> arg_UserId, FName arg_SessionName, FName arg_Map, bool arg_bIsLAN, bool arg_bIsPresence, int32 arg_MaxNumPlayers)
 {
 	// Get the Online Subsystem to work with
 	const IOnlineSubsystem* OnlineSubsystemInterface = IOnlineSubsystem::Get();
@@ -174,7 +172,11 @@ bool UOGameInstance::CreateSession(TSharedPtr<const FUniqueNetId> arg_UserId, FN
 			SessionSettings->bAllowJoinViaPresence = true;
 			SessionSettings->bAllowJoinViaPresenceFriendsOnly = false;
 
-			SessionSettings->Set(SETTING_MAPNAME, FString("FirstPersonExampleMap"), EOnlineDataAdvertisementType::ViaOnlineService);
+			if (!arg_Map.ToString().IsEmpty())
+			{
+				SessionInfo.GameMapName = arg_Map;
+				SessionSettings->Set(SETTING_MAPNAME, SessionInfo.GameMapName, EOnlineDataAdvertisementType::ViaOnlineService);
+			}
 
 			// Set the delegate to the Handle of the SessionInterface
 			OnCreateSessionCompleteDelegateHandle = OnlineSessionInterface->AddOnCreateSessionCompleteDelegate_Handle(OnCreateSessionCompleteDelegate);
@@ -273,7 +275,7 @@ void UOGameInstance::OnDestroySessionComplete(FName arg_SessionName, bool arg_bW
 			// If it was successful, we just load another level
 			if (arg_bWasSuccessful)
 			{
-				UGameplayStatics::OpenLevel(GetWorld(), "EntryMap", true);
+				UGameplayStatics::OpenLevel(GetWorld(), SessionInfo.EntryMapName, true);
 			}
 		}
 	}
@@ -305,7 +307,7 @@ void UOGameInstance::OnReadFriendsListComplete(int32 arg_LocalUserNum, bool arg_
 
 							const ULocalPlayer* LocalPlayer = GetFirstGamePlayer();
 
-							if (OnlineSessionInterface->SendSessionInviteToFriend(LocalPlayer->GetControllerId(), SessionName, *UniqueNetIdWrapper.GetUniqueNetId()))
+							if (OnlineSessionInterface->SendSessionInviteToFriend(LocalPlayer->GetControllerId(), SessionInfo.SessionName, *UniqueNetIdWrapper.GetUniqueNetId()))
 							{
 								GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Invited friend %d"), arg_bWasSuccessful));
 							}
@@ -323,11 +325,6 @@ void UOGameInstance::OnReadFriendsListComplete(int32 arg_LocalUserNum, bool arg_
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Failed to read friends: %s"), *arg_ErrorString));
 	}
-}
-
-void UOGameInstance::OnSessionInviteReceivedComplete(const FUniqueNetId& arg_PersonInvited, const FUniqueNetId& arg_PersonInviting, const FString& arg_AppId, const FOnlineSessionSearchResult& arg_SessionToJoin)
-{
-	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, FString::Printf(TEXT("Recevied invite")));
 }
 
 void UOGameInstance::OnSessionUserInviteAccepted(const bool arg_bWasSuccesful, const int32 arg_LocalUserNum, TSharedPtr<const FUniqueNetId> arg_NetId, const FOnlineSessionSearchResult& arg_SessionSearchResult)
@@ -365,8 +362,8 @@ void UOGameInstance::OnCreateSessionComplete(FName arg_SessionName, bool arg_bWa
 				// Set the StartSession delegate handle
 				OnStartSessionCompleteDelegateHandle = OnlineSessionInterface->AddOnStartSessionCompleteDelegate_Handle(OnStartSessionCompleteDelegate);
 
-				SessionName = arg_SessionName;
-				OnlineSessionInterface->StartSession(SessionName);
+				SessionInfo.SessionName = arg_SessionName;
+				OnlineSessionInterface->StartSession(SessionInfo.SessionName);
 			}
 		}
 	}
@@ -392,7 +389,10 @@ void UOGameInstance::OnStartSessionComplete(FName arg_SessionName, bool arg_bWas
 	// If the start was successful, we can open a NewMap if we want. Make sure to use "listen" as a parameter!
 	if (arg_bWasSuccessful)
 	{
-		UGameplayStatics::OpenLevel(GetWorld(), "FirstPersonExampleMap", true, "listen");
+		if (!SessionInfo.GameMapName.ToString().IsEmpty())
+		{
+			UGameplayStatics::OpenLevel(GetWorld(), SessionInfo.GameMapName, true, "listen");
+		}
 
 		IOnlineSessionPtr OnlineSessionInterface = OnlineSubsystemInterface->GetSessionInterface();
 		const ULocalPlayer* LocalPlayer = GetFirstGamePlayer();
@@ -461,11 +461,11 @@ void UOGameInstance::OnJoinSessionComplete(FName arg_SessionName, EOnJoinSession
 			// String for us by giving him the SessionName and an empty String. We want to do this, because
 			// Every OnlineSubsystem uses different TravelURLs
 			FString TravelURL;
+			SessionInfo.SessionName = arg_SessionName;
 
-			if (PlayerController && OnlineSessionInterface->GetResolvedConnectString(arg_SessionName, TravelURL))
+			if (PlayerController && OnlineSessionInterface->GetResolvedConnectString(SessionInfo.SessionName, TravelURL))
 			{
-				// Finally call the ClienTravel. If you want, you could print the TravelURL to see
-				// how it really looks like
+
 				PlayerController->ClientTravel(TravelURL, ETravelType::TRAVEL_Absolute);
 			}
 		}

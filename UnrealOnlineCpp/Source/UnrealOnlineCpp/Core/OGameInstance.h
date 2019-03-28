@@ -9,6 +9,22 @@
 #include "Engine/GameInstance.h"
 #include "OGameInstance.generated.h"
 
+USTRUCT(BlueprintType)
+struct FOnlineSessionInfo
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(BlueprintReadWrite, Category = "Online|Session")
+	FName SessionName;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Online|Session")
+	FName GameMapName;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Online|Session")
+	FName EntryMapName;
+};
+
 UCLASS()
 class UNREALONLINECPP_API UOGameInstance : public UGameInstance
 {
@@ -22,7 +38,7 @@ public:
 	virtual void Shutdown() override;
 
 	UFUNCTION(BlueprintCallable, Category = "Online|Session")
-	bool HostSession(FName arg_SessionName, bool arg_bIsLAN, bool arg_bIsPresence, int32 arg_MaxNumPlayers);
+	bool HostSession(FName arg_SessionName, FName arg_Map, bool arg_bIsLAN, bool arg_bIsPresence, int32 arg_MaxNumPlayers);
 
 	UFUNCTION(BlueprintCallable, Category = "Online|Session")
 	bool FindSessions(bool arg_bIsLAN, bool arg_bIsPresence);
@@ -45,7 +61,7 @@ public:
 	* @param bIsPresence: is the Session to create a presence session.
 	* @param MaxNumPlayers: number of Maximum allowed players on this session.
 	*/
-	bool CreateSession(TSharedPtr<const FUniqueNetId> arg_UserId, FName arg_SessionName, bool arg_bIsLAN, bool arg_bIsPresence, int32 arg_MaxNumPlayers);
+	bool CreateSession(TSharedPtr<const FUniqueNetId> arg_UserId, FName arg_SessionName, FName arg_Map, bool arg_bIsLAN, bool arg_bIsPresence, int32 arg_MaxNumPlayers);
 
 	/**
 	* Joins a session via a search result.
@@ -128,21 +144,11 @@ private:
 	 */
 	void OnSessionUserInviteAccepted(const bool arg_bWasSuccesful, const int32 arg_LocalUserNum, TSharedPtr<const FUniqueNetId> arg_NetId, const FOnlineSessionSearchResult& arg_SessionSearchResult);
 
-	/**
-	* Function fired when an invite request has completed.
-	*
-	* @param arg_PersonInvited: unique net id of friend.
-	* @param arg_PersonInviting: unique net id of player.
-	* @param AppId: steam app id.
-	* @param arg_SessionToJoin: session search result.
-	*/
-	void OnSessionInviteReceivedComplete(const FUniqueNetId& arg_PersonInvited, const FUniqueNetId& arg_PersonInviting, const FString& AppId, const FOnlineSessionSearchResult& arg_SessionToJoin);
-
 private:
 	TSharedPtr<class FOnlineSessionSettings> SessionSettings;
 	TSharedPtr<class FOnlineSessionSearch> SessionSearch;
 	TArray<TSharedRef<FOnlineFriend>> FriendsList;
-	FName SessionName;
+	FOnlineSessionInfo SessionInfo;
 
 	// Delegate called when session created
 	FOnCreateSessionCompleteDelegate OnCreateSessionCompleteDelegate;
@@ -165,12 +171,6 @@ private:
 	// Delegate for when an invite is accepted (including rich presence)
 	FOnSessionUserInviteAcceptedDelegate OnSessionUserInviteAcceptedDelegate;
 
-	FOnSessionInviteReceivedDelegate OnSessionInviteReceivedDelegate;
-	FDelegateHandle OnSessionInviteReceivedDelegateHandle;
-
-	// Handles to registered delegates for accepting an invite
-	FDelegateHandle OnSessionUserInviteAcceptedDelegateHandle;
-
 	// Handles to registered delegates for creation
 	FDelegateHandle OnCreateSessionCompleteDelegateHandle;
 
@@ -185,4 +185,7 @@ private:
 
 	// Handle to registered delegate for destroying a session
 	FDelegateHandle OnDestroySessionCompleteDelegateHandle;
+
+	// Handles to registered delegates for accepting an invite
+	FDelegateHandle OnSessionUserInviteAcceptedDelegateHandle;
 };
